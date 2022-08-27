@@ -1,0 +1,319 @@
+	.equ @, $000
+	.equ stack_start, $100
+	.equ kbd_stat, $000
+	.equ kbd_data, $001
+	.equ display,  $317
+	.equ GET_NUM, $E01
+	.equ PUT_STR, $E05
+	.equ PUT_NL, $E06
+	.equ PUT_CHR, $E08
+	.equ TO_STR, $E02
+	.equ M, 6
+	.equ N, 7
+	
+	lds#   stack_start
+	ldf#   0
+	psh#   prompt_len
+	psh#   prompt
+	jsr    PUT_STR
+	ads#   2	
+	jsr    GET_NUM
+	sta    num_gens
+	jsr    PUT_NL
+	
+	psh#   gen_len
+	psh#   generation
+	jsr    PUT_STR
+	ads#   2
+	lda#   '0'
+	jsr    PUT_CHR
+	jsr    PUT_NL
+	psh#   base_mat
+	jsr    print_grid
+	ads#   1
+	psh#   base_mat
+	psh#   M
+	psh#   N
+	psh#   next_mat
+	jsr    nextGen
+	ads#   4
+do_again:	lda    gen_cnt
+	cma    num_gens
+	jge    done
+	psh#   gen_len
+	psh#   generation
+	jsr    PUT_STR
+	ads#   2
+	jsr    PUT_NL
+	psh#   next_mat
+	jsr    print_grid
+	ads#   1
+	psh#   next_mat
+	psh#   M
+	psh#   N
+	psh#   next_mat
+	jsr    nextGen
+	ads#   4
+	inc    gen_cnt
+	jmp    do_again
+done:	psh#   prog_len
+	psh#   program_end
+	jsr    PUT_STR
+	ads#   2
+	hlt
+
+	.equ matrix, 4
+ 	
+print_grid:	pshf 
+	psha
+	pshx 
+	tsf
+	ldx#   0
+convert:	cmx#   M*N
+	jge    project 
+	lda& ! matrix
+	cma#   1
+	jeq    asterisk
+	lda#   $2E 
+	stc    char_grid
+	adx#   1
+	jmp    convert
+asterisk:	lda#   $2A
+	stc    char_grid
+	adx#   1
+	jmp    convert
+project:	ldx#   0
+next_char:	lda    col_cnt
+	cmx#   M*N
+	jge    complete 
+	cma#   N
+	jge    print_line
+new_line:	ldc    char_grid
+	outb   display
+	inc    col_cnt
+	adx#   1
+	jmp    next_char
+print_line:	jsr    PUT_NL
+	clr    col_cnt
+	jmp    new_line			
+complete:	clr    col_cnt
+	jsr    PUT_NL
+	jsr    PUT_NL
+	popx
+	popa
+	popf
+	rtn	
+
+
+prompt:	.char 'how many generations would you like toprint (enter 0 to end)? ' ,prompt_len
+num_gens:	.word 
+gen_cnt:	.word 0
+generation:	.char 'Generation: ' ,gen_len
+program_end:	.char 'End of program. ' , prog_len
+char_grid:	.blkw (M*N + 2) / 3, 0
+
+
+	.equ @, $400
+	.equ init_grid, 7 
+	.equ rows, 6
+	.equ cols, 5 
+	.equ next_grid, 4
+
+nextGen:	pshf
+	psha
+	pshx
+	tsf
+	lda !  rows
+	mul !  cols
+	sba#   1
+	sta    limit
+	ldx#	 0
+loop1:	cmx    limit
+	jgt    check_n
+	lda	 cnt
+	cma !  cols
+	jge	 next_row
+	lda& ! init_grid
+	pshx
+	adx	 offset 
+	sta+	 border
+	popx
+	adx#	 1
+	inc	 cnt
+	jmp    loop1
+next_row:	lda#   0
+	sta    cnt
+	lda    offset
+	ada#   2
+	sta    offset
+	jmp    loop1
+check_n:	lda#   N + 3
+	sta    offset
+	lda#	 (M+2) * (N+2) - 1
+	sba    offset
+	sta    limit
+	ldx    offset
+loop2:	cmx 	 limit	 
+	jgt	 end
+	lda    col_cnt
+	cma !  cols
+	jge    edge_bypass
+	lda+   border
+	pshx
+	clr    cnt
+	sbx    offset
+top:	lda    cnt 
+	cma#   2
+	jgt	 left 
+	lda+ 	 border
+	cma# 	 0
+	jeq	 skip1
+	inc	 head_cnt
+skip1:	adx#	 1
+	inc    cnt
+	jmp    top
+left:	popx
+	pshx
+	sbx#   1
+	lda+   border
+	cma#   0
+	jeq    skip2
+	inc    head_cnt
+skip2:	jmp    right
+right:	popx
+	pshx   
+	adx# 	 1
+	lda+   border
+	cma#   0
+	jeq    skip3
+	inc    head_cnt
+skip3:	jmp    bot
+bot:	popx
+	pshx
+	clr    cnt
+	adx	 offset
+continue:	lda	 cnt
+	cma#   2
+	jgt    finished
+	lda+   border
+	cma#   0
+	jeq    skip4
+	inc	 head_cnt
+skip4:	sbx#	 1
+	inc    cnt
+	jmp    continue       
+finished:    	popx
+	inc    col_cnt
+	lda+   border
+	cma#   0
+	jeq    dead
+	cma#   1 
+	jeq    living
+dead:	lda	 head_cnt
+	cma#	 3
+	jeq    birth
+	inc    element
+	clr    head_cnt
+	adx#   1
+	jmp    loop2
+birth:	pshx
+	ldx    element
+	lda#	 1
+	sta& ! next_grid
+	inc    element	 
+	clr    head_cnt
+	popx
+	adx#   1
+	jmp	 loop2
+living:	lda    head_cnt
+	cma#   4
+	jge    kill
+	cma#   1
+	jle    kill
+	pshx
+	ldx    element
+	lda#   1
+             	sta& ! next_grid
+	inc    element
+	clr    head_cnt
+	popx
+	adx#   1
+	jmp    loop2
+kill:	pshx
+	ldx    element
+	lda#   0
+	sta& ! next_grid
+	inc    element
+	clr	 head_cnt
+	popx
+	adx#   1
+	jmp    loop2
+edge_bypass:	adx#   2
+	clr    col_cnt
+	jmp    loop2
+end:	clr    col_cnt
+	clr    head_cnt
+	clr    element
+	clr    limit
+	clr    cnt
+	popx
+	popa
+	popf
+	rtn
+	 
+col_cnt:	.word 0
+head_cnt:	.word 0
+element:	.word 0
+limit:	.word 0
+cnt:	.word 0
+offset:	.word N + 3
+next_mat:	.blkw M*N, 0
+base_mat:	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 1
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 1
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word	1
+	.word 1
+	.word 1
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word	0
+	.word	0
+	.word 0
+	.word 0
+	.word 0
+border:	.blkw (M+2)*(N+2), 0
+
+	
+	
+	
+	
+	

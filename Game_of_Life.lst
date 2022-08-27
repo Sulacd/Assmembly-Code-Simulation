@@ -1,0 +1,373 @@
+LINE ADDR CONTENTS SOURCE LINE
+  1.              	.equ @, $000
+  2.              	.equ stack_start, $100
+  3.              	.equ kbd_stat, $000
+  4.              	.equ kbd_data, $001
+  5.              	.equ display,  $317
+  6.              	.equ GET_NUM, $E01
+  7.              	.equ PUT_STR, $E05
+  8.              	.equ PUT_NL, $E06
+  9.              	.equ PUT_CHR, $E08
+ 10.              	.equ TO_STR, $E02
+ 11.              	.equ M, 6
+ 12.              	.equ N, 7
+ 13.              	
+ 14.  000 020100  	lds#   stack_start
+ 15.  001 030000  	ldf#   0
+ 16.  002 08003E  	psh#   prompt_len
+ 17.  003 080058  	psh#   prompt
+ 18.  004 412E05  	jsr    PUT_STR
+ 19.  005 120002  	ads#   2	
+ 20.  006 412E01  	jsr    GET_NUM
+ 21.  007 04206D  	sta    num_gens
+ 22.  008 412E06  	jsr    PUT_NL
+ 23.              	
+ 24.  009 08000C  	psh#   gen_len
+ 25.  00A 08006F  	psh#   generation
+ 26.  00B 412E05  	jsr    PUT_STR
+ 27.  00C 120002  	ads#   2
+ 28.  00D 000030  	lda#   '0'
+ 29.  00E 412E08  	jsr    PUT_CHR
+ 30.  00F 412E06  	jsr    PUT_NL
+ 31.  010 0804BD  	psh#   base_mat
+ 32.  011 412031  	jsr    print_grid
+ 33.  012 120001  	ads#   1
+ 34.  013 0804BD  	psh#   base_mat
+ 35.  014 080006  	psh#   M
+ 36.  015 080007  	psh#   N
+ 37.  016 080493  	psh#   next_mat
+ 38.  017 412400  	jsr    nextGen
+ 39.  018 120004  	ads#   4
+ 40.  019 00206E  do_again:	lda    gen_cnt
+ 41.  01A 20206D  	cma    num_gens
+ 42.  01B 4B202C  	jge    done
+ 43.  01C 08000C  	psh#   gen_len
+ 44.  01D 08006F  	psh#   generation
+ 45.  01E 412E05  	jsr    PUT_STR
+ 46.  01F 120002  	ads#   2
+ 47.  020 412E06  	jsr    PUT_NL
+ 48.  021 080493  	psh#   next_mat
+ 49.  022 412031  	jsr    print_grid
+ 50.  023 120001  	ads#   1
+ 51.  024 080493  	psh#   next_mat
+ 52.  025 080006  	psh#   M
+ 53.  026 080007  	psh#   N
+ 54.  027 080493  	psh#   next_mat
+ 55.  028 412400  	jsr    nextGen
+ 56.  029 120004  	ads#   4
+ 57.  02A 1B206E  	inc    gen_cnt
+ 58.  02B 402019  	jmp    do_again
+ 59.  02C 080010  done:	psh#   prog_len
+ 60.  02D 080073  	psh#   program_end
+ 61.  02E 412E05  	jsr    PUT_STR
+ 62.  02F 120002  	ads#   2
+ 63.  030 FFFFFF  	hlt
+ 64.              
+ 65.              	.equ matrix, 4
+ 66.               	
+ 67.  031 FFF012  print_grid:	pshf 
+ 68.  032 FFF010  	psha
+ 69.  033 FFF011  	pshx 
+ 70.  034 FFF008  	tsf
+ 71.  035 010000  	ldx#   0
+ 72.  036 21002A  convert:	cmx#   M*N
+ 73.  037 4B2043  	jge    project 
+ 74.  038 009004  	lda& ! matrix
+ 75.  039 200001  	cma#   1
+ 76.  03A 48203F  	jeq    asterisk
+ 77.  03B 00002E  	lda#   $2E 
+ 78.  03C 512079  	stc    char_grid
+ 79.  03D 110001  	adx#   1
+ 80.  03E 402036  	jmp    convert
+ 81.  03F 00002A  asterisk:	lda#   $2A
+ 82.  040 512079  	stc    char_grid
+ 83.  041 110001  	adx#   1
+ 84.  042 402036  	jmp    convert
+ 85.  043 010000  project:	ldx#   0
+ 86.  044 00248D  next_char:	lda    col_cnt
+ 87.  045 21002A  	cmx#   M*N
+ 88.  046 4B2051  	jge    complete 
+ 89.  047 200007  	cma#   N
+ 90.  048 4B204E  	jge    print_line
+ 91.  049 502079  new_line:	ldc    char_grid
+ 92.  04A 712317  	outb   display
+ 93.  04B 1B248D  	inc    col_cnt
+ 94.  04C 110001  	adx#   1
+ 95.  04D 402044  	jmp    next_char
+ 96.  04E 412E06  print_line:	jsr    PUT_NL
+ 97.  04F 0A248D  	clr    col_cnt
+ 98.  050 402049  	jmp    new_line			
+ 99.  051 0A248D  complete:	clr    col_cnt
+100.  052 412E06  	jsr    PUT_NL
+101.  053 412E06  	jsr    PUT_NL
+102.  054 FFF014  	popx
+103.  055 FFF013  	popa
+104.  056 FFF015  	popf
+105.  057 FFF040  	rtn	
+106.              
+107.              
+108.  058 686F77  prompt:	.char 'how many generations would you like toprint (enter 0 to end)? ' ,prompt_len
+      059 206D61
+      05A 6E7920
+      05B 67656E
+      05C 657261
+      05D 74696F
+      05E 6E7320
+      05F 776F75
+      060 6C6420
+      061 796F75
+      062 206C69
+      063 6B6520
+      064 746F70
+      065 72696E
+      066 742028
+      067 656E74
+      068 657220
+      069 302074
+      06A 6F2065
+      06B 6E6429
+      06C 3F2020
+109.  06D 000000  num_gens:	.word 
+110.  06E 000000  gen_cnt:	.word 0
+111.  06F 47656E  generation:	.char 'Generation: ' ,gen_len
+      070 657261
+      071 74696F
+      072 6E3A20
+112.  073 456E64  program_end:	.char 'End of program. ' , prog_len
+      074 206F66
+      075 207072
+      076 6F6772
+      077 616D2E
+      078 202020
+113.  079 000000  char_grid:	.blkw (M*N + 2) / 3, 0
+114.              
+115.              
+116.              	.equ @, $400
+117.              	.equ init_grid, 7 
+118.              	.equ rows, 6
+119.              	.equ cols, 5 
+120.              	.equ next_grid, 4
+121.              
+122.  400 FFF012  nextGen:	pshf
+123.  401 FFF010  	psha
+124.  402 FFF011  	pshx
+125.  403 FFF008  	tsf
+126.  404 003006  	lda !  rows
+127.  405 183005  	mul !  cols
+128.  406 140001  	sba#   1
+129.  407 042490  	sta    limit
+130.  408 010000  	ldx#	 0
+131.  409 212490  loop1:	cmx    limit
+132.  40A 4D241C  	jgt    check_n
+133.  40B 002491  	lda	 cnt
+134.  40C 203005  	cma !  cols
+135.  40D 4B2416  	jge	 next_row
+136.  40E 009007  	lda& ! init_grid
+137.  40F FFF011  	pshx
+138.  410 112492  	adx	 offset 
+139.  411 0444E7  	sta+	 border
+140.  412 FFF014  	popx
+141.  413 110001  	adx#	 1
+142.  414 1B2491  	inc	 cnt
+143.  415 402409  	jmp    loop1
+144.  416 000000  next_row:	lda#   0
+145.  417 042491  	sta    cnt
+146.  418 002492  	lda    offset
+147.  419 100002  	ada#   2
+148.  41A 042492  	sta    offset
+149.  41B 402409  	jmp    loop1
+150.  41C 00000A  check_n:	lda#   N + 3
+151.  41D 042492  	sta    offset
+152.  41E 000047  	lda#	 (M+2) * (N+2) - 1
+153.  41F 142492  	sba    offset
+154.  420 042490  	sta    limit
+155.  421 012492  	ldx    offset
+156.  422 212490  loop2:	cmx 	 limit	 
+157.  423 4D2484  	jgt	 end
+158.  424 00248D  	lda    col_cnt
+159.  425 203005  	cma !  cols
+160.  426 4B2481  	jge    edge_bypass
+161.  427 0044E7  	lda+   border
+162.  428 FFF011  	pshx
+163.  429 0A2491  	clr    cnt
+164.  42A 152492  	sbx    offset
+165.  42B 002491  top:	lda    cnt 
+166.  42C 200002  	cma#   2
+167.  42D 4D2435  	jgt	 left 
+168.  42E 0044E7  	lda+ 	 border
+169.  42F 200000  	cma# 	 0
+170.  430 482432  	jeq	 skip1
+171.  431 1B248E  	inc	 head_cnt
+172.  432 110001  skip1:	adx#	 1
+173.  433 1B2491  	inc    cnt
+174.  434 40242B  	jmp    top
+175.  435 FFF014  left:	popx
+176.  436 FFF011  	pshx
+177.  437 150001  	sbx#   1
+178.  438 0044E7  	lda+   border
+179.  439 200000  	cma#   0
+180.  43A 48243C  	jeq    skip2
+181.  43B 1B248E  	inc    head_cnt
+182.  43C 40243D  skip2:	jmp    right
+183.  43D FFF014  right:	popx
+184.  43E FFF011  	pshx   
+185.  43F 110001  	adx# 	 1
+186.  440 0044E7  	lda+   border
+187.  441 200000  	cma#   0
+188.  442 482444  	jeq    skip3
+189.  443 1B248E  	inc    head_cnt
+190.  444 402445  skip3:	jmp    bot
+191.  445 FFF014  bot:	popx
+192.  446 FFF011  	pshx
+193.  447 0A2491  	clr    cnt
+194.  448 112492  	adx	 offset
+195.  449 002491  continue:	lda	 cnt
+196.  44A 200002  	cma#   2
+197.  44B 4D2453  	jgt    finished
+198.  44C 0044E7  	lda+   border
+199.  44D 200000  	cma#   0
+200.  44E 482450  	jeq    skip4
+201.  44F 1B248E  	inc	 head_cnt
+202.  450 150001  skip4:	sbx#	 1
+203.  451 1B2491  	inc    cnt
+204.  452 402449  	jmp    continue       
+205.  453 FFF014  finished:    	popx
+206.  454 1B248D  	inc    col_cnt
+207.  455 0044E7  	lda+   border
+208.  456 200000  	cma#   0
+209.  457 48245A  	jeq    dead
+210.  458 200001  	cma#   1 
+211.  459 48246A  	jeq    living
+212.  45A 00248E  dead:	lda	 head_cnt
+213.  45B 200003  	cma#	 3
+214.  45C 482461  	jeq    birth
+215.  45D 1B248F  	inc    element
+216.  45E 0A248E  	clr    head_cnt
+217.  45F 110001  	adx#   1
+218.  460 402422  	jmp    loop2
+219.  461 FFF011  birth:	pshx
+220.  462 01248F  	ldx    element
+221.  463 000001  	lda#	 1
+222.  464 049004  	sta& ! next_grid
+223.  465 1B248F  	inc    element	 
+224.  466 0A248E  	clr    head_cnt
+225.  467 FFF014  	popx
+226.  468 110001  	adx#   1
+227.  469 402422  	jmp	 loop2
+228.  46A 00248E  living:	lda    head_cnt
+229.  46B 200004  	cma#   4
+230.  46C 4B2478  	jge    kill
+231.  46D 200001  	cma#   1
+232.  46E 4C2478  	jle    kill
+233.  46F FFF011  	pshx
+234.  470 01248F  	ldx    element
+235.  471 000001  	lda#   1
+236.  472 049004               	sta& ! next_grid
+237.  473 1B248F  	inc    element
+238.  474 0A248E  	clr    head_cnt
+239.  475 FFF014  	popx
+240.  476 110001  	adx#   1
+241.  477 402422  	jmp    loop2
+242.  478 FFF011  kill:	pshx
+243.  479 01248F  	ldx    element
+244.  47A 000000  	lda#   0
+245.  47B 049004  	sta& ! next_grid
+246.  47C 1B248F  	inc    element
+247.  47D 0A248E  	clr	 head_cnt
+248.  47E FFF014  	popx
+249.  47F 110001  	adx#   1
+250.  480 402422  	jmp    loop2
+251.  481 110002  edge_bypass:	adx#   2
+252.  482 0A248D  	clr    col_cnt
+253.  483 402422  	jmp    loop2
+254.  484 0A248D  end:	clr    col_cnt
+255.  485 0A248E  	clr    head_cnt
+256.  486 0A248F  	clr    element
+257.  487 0A2490  	clr    limit
+258.  488 0A2491  	clr    cnt
+259.  489 FFF014  	popx
+260.  48A FFF013  	popa
+261.  48B FFF015  	popf
+262.  48C FFF040  	rtn
+263.              	 
+264.  48D 000000  col_cnt:	.word 0
+265.  48E 000000  head_cnt:	.word 0
+266.  48F 000000  element:	.word 0
+267.  490 000000  limit:	.word 0
+268.  491 000000  cnt:	.word 0
+269.  492 00000A  offset:	.word N + 3
+270.  493 000000  next_mat:	.blkw M*N, 0
+271.  4BD 000000  base_mat:	.word 0
+272.  4BE 000000  	.word 0
+273.  4BF 000000  	.word 0
+274.  4C0 000000  	.word 0
+275.  4C1 000000  	.word 0
+276.  4C2 000000  	.word 0
+277.  4C3 000000  	.word 0
+278.  4C4 000000  	.word 0
+279.  4C5 000000  	.word 0
+280.  4C6 000001  	.word 1
+281.  4C7 000000  	.word 0
+282.  4C8 000000  	.word 0
+283.  4C9 000000  	.word 0
+284.  4CA 000000  	.word 0
+285.  4CB 000000  	.word 0
+286.  4CC 000000  	.word 0
+287.  4CD 000000  	.word 0
+288.  4CE 000001  	.word 1
+289.  4CF 000000  	.word 0
+290.  4D0 000000  	.word 0
+291.  4D1 000000  	.word 0
+292.  4D2 000000  	.word 0
+293.  4D3 000001  	.word	1
+294.  4D4 000001  	.word 1
+295.  4D5 000001  	.word 1
+296.  4D6 000000  	.word 0
+297.  4D7 000000  	.word 0
+298.  4D8 000000  	.word 0
+299.  4D9 000000  	.word 0
+300.  4DA 000000  	.word 0
+301.  4DB 000000  	.word 0
+302.  4DC 000000  	.word 0
+303.  4DD 000000  	.word 0
+304.  4DE 000000  	.word 0
+305.  4DF 000000  	.word 0
+306.  4E0 000000  	.word 0
+307.  4E1 000000  	.word 0
+308.  4E2 000000  	.word	0
+309.  4E3 000000  	.word	0
+310.  4E4 000000  	.word 0
+311.  4E5 000000  	.word 0
+312.  4E6 000000  	.word 0
+313.  4E7 000000  border:	.blkw (M+2)*(N+2), 0
+314.              
+315.              	
+316.              	
+317.              	
+318.              	
+319.              	
+
+                     SYMBOL TABLE CONTENTS
+
+00003F = ASTERISK        0004BD = BASE_MAT        000461 = BIRTH           
+0004E7 = BORDER          000445 = BOT             000079 = CHAR_GRID       
+00041C = CHECK_N         000491 = CNT             000005 = COLS            
+00048D = COL_CNT         000051 = COMPLETE        000449 = CONTINUE        
+000036 = CONVERT         00045A = DEAD            000317 = DISPLAY         
+00002C = DONE            000019 = DO_AGAIN        000481 = EDGE_BYPASS     
+00048F = ELEMENT         000484 = END             000453 = FINISHED        
+00006F = GENERATION      00006E = GEN_CNT         00000C = GEN_LEN         
+000E01 = GET_NUM         00048E = HEAD_CNT        000007 = INIT_GRID       
+000001 = KBD_DATA        000000 = KBD_STAT        000478 = KILL            
+000435 = LEFT            000490 = LIMIT           00046A = LIVING          
+000409 = LOOP1           000422 = LOOP2           000006 = M               
+000004 = MATRIX          000007 = N               000049 = NEW_LINE        
+000400 = NEXTGEN         000044 = NEXT_CHAR       000004 = NEXT_GRID       
+000493 = NEXT_MAT        000416 = NEXT_ROW        00006D = NUM_GENS        
+000492 = OFFSET          000031 = PRINT_GRID      00004E = PRINT_LINE      
+000073 = PROGRAM_END     000010 = PROG_LEN        000043 = PROJECT         
+000058 = PROMPT          00003E = PROMPT_LEN      000E08 = PUT_CHR         
+000E06 = PUT_NL          000E05 = PUT_STR         00043D = RIGHT           
+000006 = ROWS            000432 = SKIP1           00043C = SKIP2           
+000444 = SKIP3           000450 = SKIP4           000100 = STACK_START     
+00042B = TOP             000E02 = TO_STR          
